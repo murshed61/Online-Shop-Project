@@ -12,6 +12,13 @@ void sign_in();
 void user_name_check(user *details);
 int main()
 {
+    FILE *fp;
+    fp = fopen("Files/sign_up_data.txt","r");
+    if(fp==NULL)
+    {
+        fopen("Files/sign_up_data.txt","w");
+    }
+    fclose(fp);
     while(1)
     {
         system("cls");

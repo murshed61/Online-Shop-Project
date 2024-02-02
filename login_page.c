@@ -14,10 +14,10 @@ void user_name_check(user *details);
 int main()
 {
     FILE *fp;
-    fp = fopen("Files/sign_up_data.bin","rb");
+    fp = fopen("sign_up_data.bin","rb");
     if(fp==NULL)
     {
-        fopen("Files/sign_up_data.bin","wb");
+        fopen("sign_up_data.bin","wb");
     }
     fclose(fp);
     while(1)
@@ -56,7 +56,7 @@ void sign_up()
     scanf("%s",details.num);
     fflush(stdin);
     FILE *fp;
-    fp = fopen("Files/sign_up_data.bin","ab");
+    fp = fopen("sign_up_data.bin","ab");
     if(fp==NULL)
     {
         perror("\n");
@@ -81,7 +81,7 @@ void sign_in()
 
     user details;
     FILE *fp;
-    fp = fopen("Files/sign_up_data.bin","rb");
+    fp = fopen("sign_up_data.bin","rb");
     if(fp==NULL)
     {
         perror("\n");
@@ -114,7 +114,7 @@ void user_name_check(user *details)
 {
     user details2;
     FILE *fp;
-    fp = fopen("Files/sign_up_data.bin","rb");
+    fp = fopen("sign_up_data.bin","rb");
     if(fp==NULL)
     {
         perror("\n");

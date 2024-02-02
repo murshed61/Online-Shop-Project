@@ -22,6 +22,7 @@ void user_name_check(user *details);
 
 int main()
 {
+    system("cls");
     front_page();
 }
 void front_page()
@@ -69,7 +70,10 @@ void search_item()
 }
 void error_handling()
 {
-
+  fflush(stdin);
+  printf("Something Went Wrong\n");
+  sleep(3);
+  main();
 }
 void cart()
 {

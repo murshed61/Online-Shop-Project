@@ -16,6 +16,7 @@ typedef struct ITEM
 //Global variables
 char login_user_name[50];
 int login_status=0;
+char admin_username[50];
 //Function declarations
 void front_page_guest();
 void front_page_logged_in();
@@ -53,7 +54,7 @@ void displayProducts(int category);
 void admin_sign();
 void admin_sign_up();
 void admin_sign_in();
-void admin_username_check();
+void admin_username_check(user *admin);
 //----------------------------------
 void admin_error();
 
@@ -157,6 +158,7 @@ void sign_in_page()
     system("cls");
     printf("1.User Sign in/Sign Up\n");
     printf("2.Admin Sign in/Sign Up\n");
+    printf("3.Back to Front Page\n");
     int choice;
     scanf("%d",&choice);
     switch(choice)
@@ -165,7 +167,10 @@ void sign_in_page()
         user_sign();
         break;
     case 2:
-        printf("Working on\n");
+        admin_sign();
+        break;
+    case 3:
+        back_to_front(login_status);
         break;
     default:
         error_handling(login_status);
@@ -185,6 +190,7 @@ void user_sign()
     fclose(fp);
     printf("1.Sign up\n");
     printf("2.Sign in\n");
+    printf("3.Back to front page\n");
     int choice;
     scanf("%d",&choice);
     switch(choice)
@@ -194,6 +200,9 @@ void user_sign()
         break;
     case 2:
         sign_in();
+        break;
+    case 3:
+        back_to_front(login_status);
         break;
     default:
         error_handling(login_status);
@@ -229,6 +238,9 @@ void sign_up()
         fwrite(&details,sizeof(user),1,fp);
     }
     fclose(fp);
+    printf("Successfully registered\n");
+    sleep(2);
+    user_sign();
 }
 void sign_in()
 {
@@ -266,12 +278,14 @@ void sign_in()
             printf("Login Successful\n");
             login_status=2;
             strcpy(login_user_name,username);
+            fclose(fp);
             front_page_logged_in();
             sleep(3);
         }
         else
         {
             printf("Username or Password is wrong\n");
+            fclose(fp);
             front_page_guest();
             sleep(3);
         }
@@ -498,12 +512,58 @@ void displayProducts(int category)
 }
 void admin_portal()
 {
-
+    system("cls");
+  printf("1.Add Products\n");
+  printf("2.Remove Products\n");
+  printf("3.List of |%s|'s Items\n",admin_username);
+  printf("4.Delivered Item\n");
+  printf("5.Undelivered Item\n");
+  printf("6.Products with complaint\n");
+  printf("7.Logout\n");
+  int ch;
+  scanf("%d",&ch);
+  switch(ch)
+  {
+  case 1:
+    printf("Working on\n");
+    break;
+  case 2:
+     printf("Working on\n");
+    break;
+  case 3:
+     printf("Working on\n");
+    break;
+  case 4:
+     printf("Working on\n");
+    break;
+  case 5:
+     printf("Working on\n");
+    break;
+  case 6:
+     printf("Working on\n");
+    break;
+  case 7:
+     printf("Successfully logged out\n");
+     fflush(stdin);
+     back_to_front(login_status);
+    break;
+  default:
+    admin_error();
+    break;
+  }
 }
 void admin_sign()
 {
+    FILE *fp = fopen("admin_login_data.bin","rb");
+    if(fp==NULL)
+    {
+        fp = fopen("admin_login_data.bin","wb");
+    }
+    fclose(fp);
+    system("cls");
     printf("1.Sign Up\n");
     printf("2.Sign In\n");
+    printf("3.Back to front page\n");
     int ch;
     scanf("%d",&ch);
     switch(ch)
@@ -514,6 +574,9 @@ void admin_sign()
     case 2:
         admin_sign_in();
         break;
+    case 3:
+        back_to_front(login_status);
+        break;
     default:
         error_handling(login_status);
         break;
@@ -521,21 +584,129 @@ void admin_sign()
 }
 void admin_sign_up()
 {
+    system("cls");
+    user admin;
+    printf("Enter Username:\n");
+    scanf(" %s",admin.nam);
+    fflush(stdin);
+    admin_username_check(&admin);
 
+    printf("Enter Password:\n");
+    scanf(" %s",admin.pass);
+    fflush(stdin);
 
+    printf("Enter Number:\n");
+    scanf(" %s",admin.num);
+    fflush(stdin);
+
+    FILE *fp=fopen("admin_login_data.bin","ab");
+    if(fp==NULL)
+    {
+        perror("\n");
+    }
+    else
+    {
+       fwrite(&admin,sizeof(admin),1,fp);
+    }
+    fclose(fp);
+    printf("Succesfully Registered\n");
+    sleep(2);
+    admin_sign();
 }
 void admin_sign_in()
 {
+   char username[50];
+   printf("Enter Username:");
+   scanf(" %s",username);
+   fflush(stdin);
 
+   char password[50];
+   printf("Enter Password:");
+   scanf(" %s",password);
+   fflush(stdin);
+
+   user admin;
+   FILE *fp;
+   fp = fopen("admin_login_data.bin","rb");
+   if(fp==NULL)
+   {
+       perror("\n");
+   }
+   else
+   {
+       int match=0;
+       while(fread(&admin,sizeof(admin),1,fp)==1)
+       {
+           if(strcmp(admin.nam,username)==0&&strcmp(admin.pass,password)==0)
+           {
+               match=1;
+               break;
+           }
+
+       }
+       if(match)
+           {
+               printf("Succesfully Logged in\n");
+               fflush(stdin);
+               strcpy(admin_username,username);
+               sleep(2);
+               fclose(fp);
+               admin_portal();
+           }
+           else
+           {
+               printf("Username or Password Wrong\n");
+               sleep(2);
+               fclose(fp);
+               back_to_front(login_status);
+           }
+   }
 }
-void admin_username_check()
+void admin_username_check(user *admin)
 {
-
+    user admin2;
+    FILE *fp=fopen("admin_login_data.bin","rb");
+    if(fp==NULL)
+    {
+        perror("\n");
+    }
+    else
+    {
+        int match=0;
+        while(fread(&admin2,sizeof(admin2),1,fp)==1)
+        {
+            if(strcmp(admin2.nam,admin->nam)==0)
+            {
+                match=1;
+                break;
+            }
+        }
+        if(match)
+        {
+            printf("Username Already Exists\n");
+            sleep(2);
+            fclose(fp);
+            error_handling(login_status);
+        }
+        fclose(fp);
+    }
 }
 void admin_error()
 {
-    fflush(stdin)
+    fflush(stdin);
     printf("Something is wrong\n");
     sleep(2);
     admin_portal();
+}
+void back_to_front(int ch)
+{
+    switch(ch)
+    {
+    case 1:
+        front_page_guest();
+        break;
+    case 2:
+        front_page_logged_in();
+        break;
+    }
 }

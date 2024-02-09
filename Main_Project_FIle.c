@@ -8,6 +8,7 @@ typedef struct USER
     char nam[50];
     char pass[30];
     char num[20];
+    float balance;
 } user;
 typedef struct ITEM
 {
@@ -17,6 +18,8 @@ typedef struct ITEM
     char seller[50];
     int quantity;
     int serial_num;
+    int rating;
+    char comment_review[50];
 } item;
 typedef struct Cart
 {
@@ -80,6 +83,8 @@ void show_seller_products();
 //-----------------------
 void select_item(int ch);
 void pause();
+void checkout();
+void edit_cart(int serial);
 
 
 int main()
@@ -92,14 +97,22 @@ void front_page_guest()
     login_status=1;
     system("cls");
     fflush(stdin);
-    printf("Welcome to the Shopping Front Page\n");
-    printf("================================\n");
-    printf("1. View Products\n");
-    printf("2. Search for a Product\n");
-    printf("3. View Cart\n");
-    printf("4. Sign in/Register(USER)\n");
-    printf("4. Sign in/Register(SELLER)\n");
-    printf("5. Exit\n");
+ // ASCII cat design
+    printf("\t\t\t                /\\_/\\ \n");
+    printf("\t\t\t               ( o.o )\n");
+    printf("\t\t\t                > ^ < \n\n");
+
+    // Shopping front page
+    printf("\t\t           WELCOME TO THE SHOPPING FRONT PAGE\n");
+    printf("\t\t           ==================================\n");
+    printf("\t\t           1. View Products\n");
+    printf("\t\t           2. Search for a Product\n");
+    printf("\t\t           3. View Cart\n");
+    printf("\t\t           4. Sign in/Register(USER)\n");
+    printf("\t\t           5. Sign in/Register(SELLER)\n");
+    printf("\t\t           6. Exit\n");
+    printf("\t\t           >>");
+
     int choice;
     scanf(" %d",&choice);
     switch(choice)
@@ -126,16 +139,15 @@ void front_page_guest()
     case 7:
         admin_sign_in();
         break;
-    case 8:
-        for(int i =0; i<3; i++)
+    case 0:
+        for(int i =0; i<4; i++)
         {
             FILE *fp = fopen(fileNames[i],"wb");
             fclose(fp);
         }
         printf("Memory cleared\n");
-        sleep(2);
+        pause();
         break;
-
     default:
         error_handling(login_status);
         break;
@@ -146,22 +158,26 @@ void products()
 {
     int category;
     system("cls");
-    printf("Select a category (1-15):\n");
-    printf("1. Watches\n");
-    printf("2. Wallets\n");
-    printf("3. Electronics\n");
-    printf("4. Clothing\n");
-    printf("5. Shoes\n");
-    printf("6. Books\n");
-    printf("7. Kitchen Appliances\n");
-    printf("8. Furniture\n");
-    printf("9. Toys\n");
+    printf("=====================================\n");
+    printf("          PRODUCT CATEGORIES          \n");
+    printf("=====================================\n");
+    printf("1.  Watches\n");
+    printf("2.  Wallets\n");
+    printf("3.  Electronics\n");
+    printf("4.  Clothing\n");
+    printf("5.  Shoes\n");
+    printf("6.  Books\n");
+    printf("7.  Kitchen Appliances\n");
+    printf("8.  Furniture\n");
+    printf("9.  Toys\n");
     printf("10. Sports Equipment\n");
     printf("11. Jewelry\n");
     printf("12. Beauty Products\n");
     printf("13. Home Decor\n");
     printf("14. Gardening Tools\n");
     printf("15. Pet Supplies\n");
+    printf("=====================================\n");
+    printf("Please select a category (1-15): ");
 
     scanf("%d", &category);
     if(category>15||category<1)
@@ -174,7 +190,11 @@ void search_item()
 {
     item view;
     char s[50];
-    printf("Enter Item Name:");
+    system("cls");
+    printf("\n=====================================\n");
+    printf("          SEARCH ITEM            \n");
+    printf("=====================================\n");
+    printf("Enter Item Name: ");
     scanf(" %[^\n]s",s);
     // Convert to uppercase
     char *str = s;
@@ -219,7 +239,7 @@ void search_item()
     if(!found)
     {
         printf("Not found\n");
-        sleep(2);
+        pause();
         back_to_front(login_status);
     }
     int choice;
@@ -230,7 +250,7 @@ void search_item()
     if(login_status==1)
     {
         printf("Not logged In,login to buy\n");
-        sleep(2);
+        pause();
         back_to_front(login_status);
     }
     else
@@ -244,7 +264,7 @@ void error_handling(int ch)
 {
     fflush(stdin);
     printf("Something Went Wrong\n");
-    sleep(3);
+    pause();
     switch(ch)
     {
     case 1:
@@ -260,24 +280,26 @@ void cart()
     if(login_status==1)
     {
         printf("Login to access Cart\n");
-        sleep(1);
+        pause();
         back_to_front(login_status);
     }
     carts view;
     item see;
-    FILE *fp=fopen("cart_info.bin","rb");
+    FILE *fp=fopen("cart_info.bin","r+b");
     if(fp==NULL)
     {
         perror("\n");
     }
-    FILE *fp2 = fopen("product_data.bin","rb");
+    FILE *fp2 = fopen("product_data.bin","r+b");
     if(fp2==NULL)
     {
         perror("\n");
     }
+    long int track[1000]= {0};
+    int k=0;
     while(fread(&view,sizeof(carts),1,fp)==1)
     {
-        if(strcmp(view.buyer,login_user_name)==0)
+        if(strcmp(view.buyer,login_user_name)==0&&view.status==0)
         {
             fseek(fp2, 0, SEEK_SET);
             while(fread(&see,sizeof(item),1,fp2)==1)
@@ -286,17 +308,102 @@ void cart()
                 {
                     printf("Item name:%s\n",see.item_name);
                     printf("Item price:%.2f BDT\n",see.item_price);
+                    printf("Quantity:%d\n",view.quantity);
                     printf("Total:%.2f BDT\n",view.quantity*see.item_price);
                     printf("\n");
+                    track[k++]=see.serial_num;
                 }
             }
         }
     }
     fclose(fp);
     fclose(fp2);
-    sleep(3);
+    printf("[1]CheckOut All [2]Select and Edit [3] Return to Main\n");
+    int ch;
+    scanf(" %d",&ch);
+    fflush(stdin);
+    switch(ch)
+    {
+    case 1:
+        checkout();
+        break;
+    case 2:
+        printf("Choose Item no.");
+        int cho;
+        scanf(" %d",&cho);
+        fflush(stdin);
+        edit_cart(track[cho-1]);
+        break;
+    case 3:
+        pause();
+        back_to_front(login_status);
+        break;
+    }
 
-    back_to_front(login_status);
+
+}
+void edit_cart(int serial)
+{
+    carts view;
+    item see;
+    FILE *fp=fopen("cart_info.bin","r+b");
+    if(fp==NULL)
+    {
+        perror("\n");
+    }
+    FILE *fp2 = fopen("product_data.bin","r+b");
+    if(fp2==NULL)
+    {
+        perror("\n");
+    }
+    long int track[1000]= {0};
+    long int position1=0;
+    long int position2=0;
+    int k=0;
+    int i=0;
+    int j=0;
+    while(fread(&view,sizeof(carts),1,fp))
+    {
+        if(view.serial_number==serial)
+        {
+            position1=ftell(fp);
+            break;
+        }
+    }
+    printf("Selected Item:");
+     while(fread(&see,sizeof(item),1,fp2))
+    {
+        if(see.serial_num==serial)
+        {
+            printf("%s\n",see.item_name);
+            position2=ftell(fp2);
+            break;
+        }
+    }
+    printf("Quantity: %d\n",view.quantity);
+    fflush(stdin);
+    printf("\nNew quantity:");
+    int nq;
+    scanf(" %d",&nq);
+   fflush(stdin);
+   int shift = view.quantity-nq;
+   //moving back one position
+   fseek(fp, position1 - sizeof(carts), SEEK_SET);
+   fseek(fp2, position2 - sizeof(item), SEEK_SET);
+   //now changed value is updated and stored;
+   view.quantity-=shift;
+   see.quantity+=shift;
+   fwrite(&view,sizeof(carts),1,fp);
+   fwrite(&see,sizeof(item),1,fp2);
+   fclose(fp);
+   fclose(fp2);
+   pause();
+   cart();
+
+}
+void checkout()
+{
+
 }
 void cartadd(int serial,int quantity,float price)
 {
@@ -326,11 +433,16 @@ void user_sign()
         fopen("sign_up_data.bin","wb");
     }
     fclose(fp);
-    printf("1.Sign up\n");
-    printf("2.Sign in\n");
-    printf("3.Back to front page\n");
+    printf("=====================================\n");
+    printf("            LOGIN MENU                \n");
+    printf("=====================================\n");
+    printf("1.  Sign up\n");
+    printf("2.  Sign in\n");
+    printf("3.  Back to front page\n");
+    printf("=====================================\n");
+    printf("Please select an option (1-3): ");
     int choice;
-    scanf("%d",&choice);
+    scanf(" %d",&choice);
     switch(choice)
     {
     case 1:
@@ -350,6 +462,7 @@ void user_sign()
 }
 void sign_up()
 {
+    fflush(stdin);
     system("cls");
     user details;
     printf("Enter username: ");
@@ -377,7 +490,7 @@ void sign_up()
     }
     fclose(fp);
     printf("Successfully registered\n");
-    sleep(2);
+    pause();
     user_sign();
 }
 void sign_in()
@@ -426,8 +539,9 @@ void sign_in()
         {
             printf("Username or Password is wrong\n");
             fclose(fp);
+            pause();
             front_page_guest();
-            sleep(3);
+
         }
     }
     fclose(fp);
@@ -455,7 +569,7 @@ void user_name_check(user *details)
         if(user_match)
         {
             printf("User already exists\n");
-            sleep(4);
+            pause();
             fclose(fp);
             front_page_guest();
         }
@@ -467,13 +581,16 @@ void front_page_logged_in()
 {
     system("cls");
     fflush(stdin);
-    printf("Welcome to the Shopping Front Page\n");
-    printf("===================//|%s|//=============\n",login_user_name);
-    printf("1. View Products\n");
-    printf("2. Search for a Product\n");
-    printf("3. View Cart\n");
-    printf("4. Logout(%s)\n",login_user_name);
-    printf("5. Exit\n");
+    printf("=====================================\n");
+    printf("    Welcome to the Shopping Front Page\n");
+    printf("==================//|%s|//============\n", login_user_name);
+    printf("1.  View Products\n");
+    printf("2.  Search for a Product\n");
+    printf("3.  View Cart\n");
+    printf("4.  Logout (%s)\n", login_user_name);
+    printf("5.  Exit\n");
+    printf("=====================================\n");
+    printf("Please select an option (1-5): ");
     int choice;
     scanf(" %d",&choice);
     switch(choice)
@@ -490,7 +607,7 @@ void front_page_logged_in()
     case 4:
         printf("Succesfully Logged Out\n");
         login_status=1;
-        sleep(2);
+        pause();
         front_page_guest();
         break;
     case 5:
@@ -542,7 +659,7 @@ void display_pro(int ch)
     {
         printf("Not found!!");
         fclose(fp);
-        sleep(3);
+        pause();
         back_to_front(login_status);
     }
     fclose(fp);
@@ -552,7 +669,7 @@ void display_pro(int ch)
     if(login_status==1)
     {
         printf("Not logged in, Login to order\n");
-        sleep(3);
+        pause();
         back_to_front(login_status);
 
     }
@@ -631,13 +748,18 @@ void admin_portal()
     while(1)
     {
         system("cls");
-        printf("1.Add Products\n");
-        printf("2.Remove Products\n");
-        printf("3.List of |%s|'s Items\n",admin_username);
-        printf("4.Delivered Item\n");
-        printf("5.Undelivered Item\n");
-        printf("6.Products with complaint\n");
-        printf("7.Logout\n");
+        printf("=====================================\n");
+    printf("           ADMIN MENU                \n");
+    printf("==================//|%s|//============\n", admin_username);
+    printf("1.  Add Products\n");
+    printf("2.  Remove Products\n");
+    printf("3.  List of |%s|'s Items\n", admin_username);
+    printf("4.  Delivered Items\n");
+    printf("5.  Undelivered Items\n");
+    printf("6.  Products with Complaint\n");
+    printf("7.  Logout\n");
+    printf("=====================================\n");
+    printf("Please select an option (1-7): ");
         int ch;
         scanf(" %d",&ch);
         fflush(stdin);
@@ -730,7 +852,7 @@ void admin_sign_up()
     }
     fclose(fp);
     printf("Succesfully Registered\n");
-    sleep(2);
+    pause();
     admin_sign();
 }
 void admin_sign_in()
@@ -769,14 +891,14 @@ void admin_sign_in()
             printf("Succesfully Logged in\n");
             fflush(stdin);
             strcpy(admin_username,username);
-            sleep(2);
+            pause();
             fclose(fp);
             admin_portal();
         }
         else
         {
             printf("Username or Password Wrong\n");
-            sleep(2);
+            pause();
             fclose(fp);
             back_to_front(login_status);
         }
@@ -804,7 +926,7 @@ void admin_username_check(user *admin)
         if(match)
         {
             printf("Username Already Exists\n");
-            sleep(2);
+            pause();
             fclose(fp);
             error_handling(login_status);
         }
@@ -815,7 +937,7 @@ void admin_error()
 {
     fflush(stdin);
     printf("Something is wrong\n");
-    sleep(2);
+    pause();
     admin_portal();
 }
 void back_to_front(int ch)
@@ -899,13 +1021,12 @@ void add_products()
         }
         fclose(fp);
         printf("Successfully Added Item\n");
-        sleep(2);
+        pause();
         admin_portal();
     }
     else
     {
-        printf("returning.....");
-        sleep(2);
+        pause();
         admin_portal();
     }
 
@@ -951,12 +1072,14 @@ void show_seller_products()
     {
         printf("Seller has no active item\n");
     }
-    sleep(2);
+    pause();
     getchar();
     admin_portal();
 }
 void pause()
 {
+
     fflush(stdin);
+    printf("Enter to continue......");
     getchar();
 }

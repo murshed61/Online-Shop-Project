@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include<ctype.h>
+
 typedef struct USER
 {
     char nam[50];
@@ -21,12 +23,14 @@ typedef struct Cart
     int serial_number;
     int quantity;
     float price;
-}carts;
+    char buyer[50];
+    int status;
+} carts;
 //Global variables
 char login_user_name[50];
 int login_status=0;
 char admin_username[50];
-const char *fileNames[] = {"sign_up_data.bin", "admin_login_data.bin", "product_data.bin"};
+const char *fileNames[] = {"sign_up_data.bin", "admin_login_data.bin", "product_data.bin","cart_info.bin"};
 
 const char *categories[] =
 {
@@ -75,7 +79,7 @@ void add_products();
 void show_seller_products();
 //-----------------------
 void select_item(int ch);
-
+void pause();
 
 
 int main()
@@ -93,7 +97,8 @@ void front_page_guest()
     printf("1. View Products\n");
     printf("2. Search for a Product\n");
     printf("3. View Cart\n");
-    printf("4. Sign in/Register\n");
+    printf("4. Sign in/Register(USER)\n");
+    printf("4. Sign in/Register(SELLER)\n");
     printf("5. Exit\n");
     int choice;
     scanf(" %d",&choice);
@@ -109,20 +114,23 @@ void front_page_guest()
         cart();
         break;
     case 4:
-        sign_in_page();
+        user_sign();
         break;
     case 5:
+        admin_sign();
+        break;
+    case 6:
         printf("Thanks for visiting <3\n");
         exit(0);
         break;
-    case 6:
+    case 7:
         admin_sign_in();
         break;
-    case 7:
-        for(int i =0;i<3;i++)
+    case 8:
+        for(int i =0; i<3; i++)
         {
-          FILE *fp = fopen(fileNames[i],"wb");
-        fclose(fp);
+            FILE *fp = fopen(fileNames[i],"wb");
+            fclose(fp);
         }
         printf("Memory cleared\n");
         sleep(2);
@@ -164,6 +172,72 @@ void products()
 }
 void search_item()
 {
+    item view;
+    char s[50];
+    printf("Enter Item Name:");
+    scanf(" %[^\n]s",s);
+    // Convert to uppercase
+    char *str = s;
+    while (*str)
+    {
+        *str = toupper((unsigned char)*str);
+        str++;
+    }
+    FILE *fp = fopen("product_data.bin","rb");
+    int track[1000]= {0};
+    if(fp==NULL)
+    {
+        perror("\n");
+        return 2;
+    }
+    int i=0;
+    int found=0;
+    while(fread(&view,sizeof(item),1,fp)==1)
+    {
+        if(strstr(view.item_name,s)!=NULL)
+        {
+            found++;
+            track[i++]=view.serial_num;
+            char *str = view.item_name;
+            //convert first one to uppercase
+            if (*str)
+            {
+                *str = toupper((unsigned char)*str);
+                str++;
+            }
+
+            // Convert the rest to lowercase
+            while (*str)
+            {
+                *str = tolower((unsigned char)*str);
+                str++;
+            }
+            printf("%d. %s\n",i,view.item_name);
+        }
+    }
+    fclose(fp);
+    if(!found)
+    {
+        printf("Not found\n");
+        sleep(2);
+        back_to_front(login_status);
+    }
+    int choice;
+    printf("Choose Product:\n>>");
+    scanf(" %d",&choice);
+    fflush(stdin);
+    int serial = track[choice-1];
+    if(login_status==1)
+    {
+        printf("Not logged In,login to buy\n");
+        sleep(2);
+        back_to_front(login_status);
+    }
+    else
+    {
+        buy_menu(serial);
+    }
+
 
 }
 void error_handling(int ch)
@@ -183,41 +257,65 @@ void error_handling(int ch)
 }
 void cart()
 {
+    if(login_status==1)
+    {
+        printf("Login to access Cart\n");
+        sleep(1);
+        back_to_front(login_status);
+    }
+    carts view;
+    item see;
+    FILE *fp=fopen("cart_info.bin","rb");
+    if(fp==NULL)
+    {
+        perror("\n");
+    }
+    FILE *fp2 = fopen("product_data.bin","rb");
+    if(fp2==NULL)
+    {
+        perror("\n");
+    }
+    while(fread(&view,sizeof(carts),1,fp)==1)
+    {
+        if(strcmp(view.buyer,login_user_name)==0)
+        {
+            fseek(fp2, 0, SEEK_SET);
+            while(fread(&see,sizeof(item),1,fp2)==1)
+            {
+                if(view.serial_number==see.serial_num)
+                {
+                    printf("Item name:%s\n",see.item_name);
+                    printf("Item price:%.2f BDT\n",see.item_price);
+                    printf("Total:%.2f BDT\n",view.quantity*see.item_price);
+                    printf("\n");
+                }
+            }
+        }
+    }
+    fclose(fp);
+    fclose(fp2);
+    sleep(3);
 
+    back_to_front(login_status);
 }
 void cartadd(int serial,int quantity,float price)
 {
-  carts add;
-  add.serial_number=serial;
-  add.quantity=quantity;
-  add.price=price;
-}
-
-void sign_in_page()
-{
-    system("cls");
-    printf("1.User Sign in/Sign Up\n");
-    printf("2.Admin Sign in/Sign Up\n");
-    printf("3.Back to Front Page\n");
-    int choice;
-    scanf("%d",&choice);
-    switch(choice)
+    carts add;
+    add.serial_number=serial;
+    add.quantity=quantity;
+    add.price=price;
+    strcpy(add.buyer,login_user_name);
+    add.status=0;
+    FILE *fp=fopen("cart_info.bin","ab");
+    if(fp==NULL)
     {
-    case 1:
-        user_sign();
-        break;
-    case 2:
-        admin_sign();
-        break;
-    case 3:
-        back_to_front(login_status);
-        break;
-    default:
-        error_handling(login_status);
-        break;
-
+        perror("\n");
     }
+    fwrite(&add,sizeof(carts),1,fp);
+    fclose(fp);
+    back_to_front(login_status);
 }
+
 void user_sign()
 {
     system("cls");
@@ -255,17 +353,17 @@ void sign_up()
     system("cls");
     user details;
     printf("Enter username: ");
-    scanf("%s", details.nam);
+    scanf("%[^\n]s", details.nam);
     fflush(stdin);
     user_name_check(&details);
 
     printf("Enter password: ");
-    scanf("%s", details.pass);
+    scanf("%[^\n]s", details.pass);
     fflush(stdin);
 
 
     printf("Enter Number: ");
-    scanf("%s",details.num);
+    scanf("%[^\n]s",details.num);
     fflush(stdin);
     FILE *fp;
     fp = fopen("sign_up_data.bin","ab");
@@ -287,12 +385,13 @@ void sign_in()
     system("cls");
     char username[50];
     char password[50];
+    fflush(stdin);
     printf("Enter username: ");
-    scanf("%s",username);
+    scanf("%[^\n]s",username);
     fflush(stdin);
 
     printf("Enter password: ");
-    scanf("%s", password);
+    scanf("%[^\n]s", password);
     fflush(stdin);
 
     user details;
@@ -319,8 +418,9 @@ void sign_in()
             login_status=2;
             strcpy(login_user_name,username);
             fclose(fp);
+            pause();
             front_page_logged_in();
-            sleep(3);
+
         }
         else
         {
@@ -419,6 +519,21 @@ void display_pro(int ch)
         if(product.category==ch)
         {
             found=1;
+
+            char *str = product.item_name;
+            //convert first one to uppercase
+            if (*str)
+            {
+                *str = toupper((unsigned char)*str);
+                str++;
+            }
+
+            // Convert the rest to lowercase
+            while (*str)
+            {
+                *str = tolower((unsigned char)*str);
+                str++;
+            }
             printf("%d: %s\n",i+1,product.item_name);
             track[i++]=product.serial_num;
         }
@@ -434,6 +549,13 @@ void display_pro(int ch)
     printf("\nChoose product:>>");
     int choice;
     scanf(" %d",&choice);
+    if(login_status==1)
+    {
+        printf("Not logged in, Login to order\n");
+        sleep(3);
+        back_to_front(login_status);
+
+    }
     int serial_number = track[choice-1];
     buy_menu(serial_number);
 
@@ -454,8 +576,22 @@ void buy_menu(int serial_number)
     {
         if(serial_number==view.serial_num)
         {
+            char *str = view.item_name;
+            //convert first one to uppercase
+            if (*str)
+            {
+                *str = toupper((unsigned char)*str);
+                str++;
+            }
+
+            // Convert the rest to lowercase
+            while (*str)
+            {
+                *str = tolower((unsigned char)*str);
+                str++;
+            }
             printf("%s\n",view.item_name);
-            printf("%.3f\n",view.item_price);
+            printf("%.2f BDT\n",view.item_price);
             printf("In stock: %d\n",view.quantity);
             pos = ftell(fp);
             break;
@@ -571,16 +707,16 @@ void admin_sign_up()
     system("cls");
     user admin;
     printf("Enter Username:\n");
-    scanf(" %s",admin.nam);
+    scanf(" %[^\n]s",admin.nam);
     fflush(stdin);
     admin_username_check(&admin);
 
     printf("Enter Password:\n");
-    scanf(" %s",admin.pass);
+    scanf(" %[^\n]s",admin.pass);
     fflush(stdin);
 
     printf("Enter Number:\n");
-    scanf(" %s",admin.num);
+    scanf(" %[^\n]s",admin.num);
     fflush(stdin);
 
     FILE *fp=fopen("admin_login_data.bin","ab");
@@ -601,12 +737,12 @@ void admin_sign_in()
 {
     char username[50];
     printf("Enter Username:");
-    scanf(" %s",username);
+    scanf(" %[^\n]s",username);
     fflush(stdin);
 
     char password[50];
     printf("Enter Password:");
-    scanf(" %s",password);
+    scanf(" %[^\n]s",password);
     fflush(stdin);
 
     user admin;
@@ -719,11 +855,17 @@ void add_products()
     fflush(stdin);
 
     system("cls");
-    printf("Selected Item catagory: %s\n",categories[add.category]);
+    printf("Selected Item catagory: %[^\n]s\n",categories[add.category]);
 
     printf("Item Name:");
     scanf(" %[^\n]s",add.item_name);
     fflush(stdin);
+    char *str = add.item_name;
+    while (*str)
+    {
+        *str = toupper((unsigned char)*str);
+        str++;
+    }
 
     printf("Item price:");
     scanf(" %f",&add.item_price);
@@ -783,10 +925,23 @@ void show_seller_products()
         if(strcmp(show.seller,admin_username)==0)
         {
             found=1;
+            char *str = show.item_name;
+            //convert first one to uppercase
+            if (*str)
+            {
+                *str = toupper((unsigned char)*str);
+                str++;
+            }
 
+            // Convert the rest to lowercase
+            while (*str)
+            {
+                *str = tolower((unsigned char)*str);
+                str++;
+            }
             printf("ITEM CATAGORY:%s\n",categories[show.category-1]);
             printf("ITEM NAME:%s\n",show.item_name);
-            printf("ITEM PRICE:%f\n",show.item_price);
+            printf("ITEM PRICE:%.2f BDT\n",show.item_price);
             printf("ITEM QUANTITY:%d\n",show.quantity);
             printf("\n\n");
 
@@ -799,4 +954,9 @@ void show_seller_products()
     sleep(2);
     getchar();
     admin_portal();
+}
+void pause()
+{
+    fflush(stdin);
+    getchar();
 }

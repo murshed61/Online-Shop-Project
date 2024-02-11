@@ -3,6 +3,10 @@
 #include <string.h>
 #include<ctype.h>
 
+#define undelivered 0
+#define checkedout 1
+#define delivered 2
+
 typedef struct USER
 {
     char nam[50];
@@ -27,6 +31,7 @@ typedef struct Cart
     int quantity;
     float price;
     char buyer[50];
+    char seller[50];
     int status;
 } carts;
 //Global variables
@@ -80,6 +85,7 @@ void admin_error();
 //admin portal functions declarations
 void add_products();
 void show_seller_products();
+void undelivered_items();
 //-----------------------
 void select_item(int ch);
 void pause();
@@ -208,7 +214,7 @@ void search_item()
     if(fp==NULL)
     {
         perror("\n");
-        return 2;
+        return;
     }
     int i=0;
     int found=0;
@@ -318,7 +324,7 @@ void cart()
     }
     fclose(fp);
     fclose(fp2);
-    printf("[1]CheckOut All [2]Select and Edit [3] Return to Main\n");
+    printf("[1]CheckOut [2]Select and Edit [3] Return to Main\n");
     int ch;
     scanf(" %d",&ch);
     fflush(stdin);
@@ -403,6 +409,52 @@ void edit_cart(int serial)
 }
 void checkout()
 {
+    carts all;
+    printf("[1]CheckOut All [2]Check-Out 1 by 1 [3]Go to Main\n>>");
+    int ch;
+    long int pos=0;
+    scanf(" %d",&ch);
+    if(ch==1)
+    {   int checked=0;
+        FILE *fp3=fopen("cart_info.bin","r+b");
+        if(fp3==NULL)
+        {
+            perror("\n");
+        }
+        while(fread(&all,sizeof(carts),1,fp3)==1)
+        {
+            if(strcmp(all.buyer,login_user_name)==0&&all.status==0)
+            {  checked++;
+                pos = ftell(fp3);
+                all.status=1;
+                fseek(fp3, pos - sizeof(carts), SEEK_SET);
+                fwrite(&all, sizeof(carts), 1, fp3);
+
+            }
+        }
+        fclose(fp3);
+        if(!checked)
+        {
+            printf("No Item Found\n");
+            pause();
+            back_to_front(login_status);
+        }
+        else
+        {
+            printf("Successfully Checked out\n");
+            pause();
+            back_to_front(login_status);
+        }
+    }
+    else if(ch==2)
+    {
+
+    }
+    else
+    {
+        back_to_front(login_status);
+    }
+
 
 }
 void cartadd(int serial,int quantity,float price)
@@ -412,7 +464,25 @@ void cartadd(int serial,int quantity,float price)
     add.quantity=quantity;
     add.price=price;
     strcpy(add.buyer,login_user_name);
+    item seller;
+    //adding seller info
+    FILE *fp2 = fopen("product_data.bin","rb");
+    if(fp2==NULL)
+    {
+        perror("\n");
+        return;
+    }
+    while(fread(&seller,sizeof(item),1,fp2)==1)
+    {
+        if(seller.serial_num==serial)
+        {
+            strcpy(add.seller,seller.seller);
+            break;
+        }
+    }
+    fclose(fp2);
     add.status=0;
+
     FILE *fp=fopen("cart_info.bin","ab");
     if(fp==NULL)
     {
@@ -778,7 +848,18 @@ void admin_portal()
             printf("Working on\n");
             break;
         case 5:
-            printf("Working on\n");
+            printf("+----------------------------------------+\n");
+    printf("|       Undelivered Items Menu           |\n");
+    printf("+----------------------------------------+\n");
+    printf("| Item                       |  Quantity |\n");
+    printf("+----------------------------|-----------+\n");
+    printf("| Product 1                  |      5    |\n");
+    printf("| Product 2                  |      2    |\n");
+    printf("| Product 3                  |      1    |\n");
+    printf("+----------------------------|-----------+\n");
+    printf("|            Total           |   8 items |\n");
+    printf("+----------------------------------------+\n");
+            undelivered_items();
             break;
         case 6:
             printf("Working on\n");
@@ -1073,7 +1154,28 @@ void show_seller_products()
         printf("Seller has no active item\n");
     }
     pause();
-    getchar();
+    admin_portal();
+}
+void undelivered_items()
+{
+    carts view;
+    FILE *fp = fopen("cart_info.bin","rb");
+    if(fp==NULL)
+    {
+        perror("\n");
+        return 1;
+    }
+    while(fread(&view,sizeof(carts),1,fp)==1)
+    {
+        if(strcmp(admin_username,view.seller)==0&&view.status==1)
+        {
+            printf("Item Id:%d\n",view.serial_number);
+            printf("Item Price:%.2f BDT\n",view.price);
+            printf("Item Quantity:%d\n",view.quantity);
+        }
+    }
+    fclose(fp);
+    pause();
     admin_portal();
 }
 void pause()
